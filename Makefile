@@ -1,6 +1,7 @@
 
 CC := gcc
-CFLAGS := -Wall -Wextra -pedantic -fsanitize=address -g -std=c11
+CFLAGS_DEBUG := -Wall -Wextra -pedantic -fsanitize=address -g -std=c11
+CFLAGS_RELEASE := -o3 -std=c11
 
 all:
-	$(CC) $(CFLAGS) main.c -o main
+	$(CC) $(CFLAGS_RELEASE) main.c -o main

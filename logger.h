@@ -76,7 +76,10 @@ enum {
 static struct {
     FILE *fd;
     int flags;
-} logger_state;
+    pthread_mutex_t mutex;
+} logger_state = {
+    .mutex = PTHREAD_MUTEX_INITIALIZER,
+};
 
 static inline void logger_log(FILE *fd, const char *file, const char *func,
                               int line, struct logger_entry *e) {
@@ -117,7 +120,7 @@ static inline void logger_log(FILE *fd, const char *file, const char *func,
 }
 
 static inline void logger_set_file(FILE *fd) { logger_state.fd = fd; }
-static inline void logger_unset_file(FILE *fd) { logger_state.fd = NULL; }
+static inline void logger_unset_file(void) { logger_state.fd = NULL; }
 static inline void logger_enable_flags(int flags) {
     logger_state.flags |= flags;
 }
@@ -125,11 +128,13 @@ static inline void logger_clear_flags() { logger_state.flags = 0; }
 
 #define LOG(type)                                                              \
     do {                                                                       \
+        pthread_mutex_lock(&logger_state.mutex);                               \
         if (logger_state.fd) {                                                 \
             logger_log(logger_state.fd, __FILE__, __func__, __LINE__,          \
                        &LOGGER_TABLE[type]);                                   \
         }                                                                      \
         logger_log(stderr, __FILE__, __func__, __LINE__, &LOGGER_TABLE[type]); \
+        pthread_mutex_unlock(&logger_state.mutex);                             \
     } while (0)
 
 #endif // LOGGER_H
