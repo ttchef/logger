@@ -2,9 +2,11 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 
 #ifndef LOGGER_TYPES
 #error "Logger types not definined"
@@ -66,32 +68,66 @@ struct logger_entry {
 struct logger_entry LOGGER_TABLE[] = {LOGGER_TYPES};
 #undef _X
 
+enum {
+    LOGGER_FLAG_THREAD_ID = (1 << 0),
+    LOGGER_FLAG_TIME = (1 << 1),
+};
+
+static struct {
+    FILE *fd;
+    int flags;
+} logger_state;
+
 static inline void logger_log(FILE *fd, const char *file, const char *func,
-                              int line, struct logger_entry *e, bool to_file) {
+                              int line, struct logger_entry *e) {
     const char *level = LOGGER_LEVEL_TABLE[e->level].name;
-    if (!to_file) {
+    if (fd == stderr) {
         fprintf(fd,
-                LOGGER_COLOR_BOLD "%s[%s] " LOGGER_COLOR_RESET
-                                  "(%s:%d %s): %s\n",
+                LOGGER_COLOR_BOLD "%s[%s] " LOGGER_COLOR_RESET "(%s:%d %s) ",
                 LOGGER_COLOR_STR[LOGGER_LEVEL_TABLE[e->level].color], level,
-                file, line, func, e->msg);
+                file, line, func);
+        if (logger_state.flags & LOGGER_FLAG_THREAD_ID) {
+            fprintf(fd, "[" LOGGER_COLOR_BOLD "tid" LOGGER_COLOR_RESET " %lu] ",
+                    pthread_self());
+        }
+        if (logger_state.flags & LOGGER_FLAG_TIME) {
+            time_t now = time(NULL);
+            struct tm *t = localtime(&now);
+            fprintf(fd,
+                    "[" LOGGER_COLOR_BOLD "Time:" LOGGER_COLOR_RESET
+                    " %02d:%02d:%02d] ",
+                    t->tm_hour, t->tm_min, t->tm_sec);
+        }
     } else {
-        fprintf(fd, "[%s] (%s:%d %s): %s\n", level, file, line, func, e->msg);
+        fprintf(fd, "[%s] (%s:%d %s) ", level, file, line, func);
+        if (logger_state.flags & LOGGER_FLAG_THREAD_ID) {
+            fprintf(fd, "[tid %lu] ", pthread_self());
+        }
+        if (logger_state.flags & LOGGER_FLAG_TIME) {
+            time_t now = time(NULL);
+            struct tm *t = localtime(&now);
+            fprintf(fd, "[Time: %02d:%02d:%02d] ", t->tm_hour, t->tm_min,
+                    t->tm_sec);
+        }
     }
+
+    fprintf(fd, "%s\n", e->msg);
 }
 
-static FILE *LOGGER_FILE = NULL;
-
-static inline void logger_set_file(FILE *fd) { LOGGER_FILE = fd; }
+static inline void logger_set_file(FILE *fd) { logger_state.fd = fd; }
+static inline void logger_unset_file(FILE *fd) { logger_state.fd = NULL; }
+static inline void logger_enable_flags(int flags) {
+    logger_state.flags |= flags;
+}
+static inline void logger_clear_flags() { logger_state.flags = 0; }
 
 #define LOG(type)                                                              \
     do {                                                                       \
-        if (LOGGER_FILE) {                                                     \
-            logger_log(LOGGER_FILE, __FILE__, __func__, __LINE__,              \
-                       &LOGGER_TABLE[type], true);                             \
+        if (logger_state.fd) {                                                 \
+            logger_log(logger_state.fd, __FILE__, __func__, __LINE__,          \
+                       &LOGGER_TABLE[type]);                                   \
         }                                                                      \
-        logger_log(stderr, __FILE__, __func__, __LINE__, &LOGGER_TABLE[type],  \
-                   false);                                                     \
+        logger_log(stderr, __FILE__, __func__, __LINE__, &LOGGER_TABLE[type]); \
     } while (0)
 
 #endif // LOGGER_H

@@ -17,6 +17,7 @@
 int main() {
     FILE *logger_file = fopen("log.txt", "wb");
     logger_set_file(logger_file);
+    logger_enable_flags(LOGGER_FLAG_THREAD_ID | LOGGER_FLAG_TIME);
 
     LOG(ERROR_OUT_OF_MEMORY);
     LOG(WARN_VALUE_NOT_SET);
