@@ -15,8 +15,14 @@
 #include "logger.h"
 
 int main() {
+    FILE *logger_file = fopen("log.txt", "wb");
+    logger_set_file(logger_file);
+
     LOG(ERROR_OUT_OF_MEMORY);
     LOG(WARN_VALUE_NOT_SET);
     LOG(INFO_PRINTED);
+
+    fclose(logger_file);
+
     return 0;
 }

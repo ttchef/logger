@@ -2,6 +2,7 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -65,18 +66,32 @@ struct logger_entry {
 struct logger_entry LOGGER_TABLE[] = {LOGGER_TYPES};
 #undef _X
 
-static inline void logger_log(const char *file, const char *func, int line,
-                              struct logger_entry *e) {
+static inline void logger_log(FILE *fd, const char *file, const char *func,
+                              int line, struct logger_entry *e, bool to_file) {
     const char *level = LOGGER_LEVEL_TABLE[e->level].name;
-    fprintf(stderr, "%s[%s] " LOGGER_COLOR_RESET "(%s:%d %s): %s\n",
-            LOGGER_COLOR_STR[LOGGER_LEVEL_TABLE[e->level].color], level, file,
-            line, func, e->msg);
+    if (!to_file) {
+        fprintf(fd,
+                LOGGER_COLOR_BOLD "%s[%s] " LOGGER_COLOR_RESET
+                                  "(%s:%d %s): %s\n",
+                LOGGER_COLOR_STR[LOGGER_LEVEL_TABLE[e->level].color], level,
+                file, line, func, e->msg);
+    } else {
+        fprintf(fd, "[%s] (%s:%d %s): %s\n", level, file, line, func, e->msg);
+    }
 }
 
-#define LOG(type) logger_log(__FILE__, __func__, __LINE__, &LOGGER_TABLE[type])
+static FILE *LOGGER_FILE = NULL;
 
-#define THROW_ERROR(type)                                                      \
-    PRINT_ERROR(type);                                                         \
-    exit(EXIT_FAILURE)
+static inline void logger_set_file(FILE *fd) { LOGGER_FILE = fd; }
+
+#define LOG(type)                                                              \
+    do {                                                                       \
+        if (LOGGER_FILE) {                                                     \
+            logger_log(LOGGER_FILE, __FILE__, __func__, __LINE__,              \
+                       &LOGGER_TABLE[type], true);                             \
+        }                                                                      \
+        logger_log(stderr, __FILE__, __func__, __LINE__, &LOGGER_TABLE[type],  \
+                   false);                                                     \
+    } while (0)
 
 #endif // LOGGER_H
