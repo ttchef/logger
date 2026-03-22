@@ -87,16 +87,18 @@ static inline void logger_log(FILE *fd, const char *file, const char *func,
                 LOGGER_COLOR_STR[LOGGER_LEVEL_TABLE[e->level].color], level,
                 file, line, func);
         if (logger_state.flags & LOGGER_FLAG_THREAD_ID) {
-            fprintf(fd, "[" LOGGER_COLOR_BOLD "tid" LOGGER_COLOR_RESET " %lu] ",
-                    pthread_self());
+            fprintf(fd,
+                    "[" LOGGER_COLOR_BOLD "%stid" LOGGER_COLOR_RESET " %lu] ",
+                    LOGGER_COLOR_STR[LOGGER_COLOR_GREEN], pthread_self());
         }
         if (logger_state.flags & LOGGER_FLAG_TIME) {
             time_t now = time(NULL);
             struct tm *t = localtime(&now);
             fprintf(fd,
-                    "[" LOGGER_COLOR_BOLD "Time:" LOGGER_COLOR_RESET
+                    "[" LOGGER_COLOR_BOLD "%sTime:" LOGGER_COLOR_RESET
                     " %02d:%02d:%02d] ",
-                    t->tm_hour, t->tm_min, t->tm_sec);
+                    LOGGER_COLOR_STR[LOGGER_COLOR_GREEN], t->tm_hour, t->tm_min,
+                    t->tm_sec);
         }
     } else {
         fprintf(fd, "[%s] (%s:%d %s) ", level, file, line, func);
