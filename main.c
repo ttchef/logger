@@ -14,6 +14,7 @@
 #include "logger.h"
 
 int main() {
-    THROW_ERROR(ERROR_OUT_OF_MEMORY);
+    LOG(ERROR_OUT_OF_MEMORY);
+    LOG(WARN_VALUE_NOT_SET);
     return 0;
 }
