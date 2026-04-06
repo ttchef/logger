@@ -23,6 +23,10 @@ int main() {
     LOG(WARN_VALUE_NOT_SET);
     LOG(INFO_PRINTED);
 
+    LOGM(INFO, "Hello Wsp");
+    LOGM(WARN, "Oh no is a warning");
+    LOGM(ERROR, "let the erros come");
+
     fclose(logger_file);
 
     return 0;

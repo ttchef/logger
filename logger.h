@@ -3,6 +3,7 @@
 #define LOGGER_H
 
 #include <pthread.h>
+#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +16,9 @@
 #ifndef LOGGER_LEVELS
 #error "Logger levels not definied"
 #endif
+
+// max len for a variadic log message
+#define MAX_LOGM_LEN 1024
 
 #define LOGGER_COLORS                                                          \
     _Y(LOGGER_COLOR_BLUE, "\x1b[34m")                                          \
@@ -81,8 +85,8 @@ static struct {
     .mutex = PTHREAD_MUTEX_INITIALIZER,
 };
 
-static inline void logger_log(FILE *fd, const char *file, const char *func,
-                              int line, struct logger_entry *e) {
+void logger_log(FILE *fd, const char *file, const char *func, int line,
+                struct logger_entry *e) {
     const char *level = LOGGER_LEVEL_TABLE[e->level].name;
     if (fd == stderr) {
         fprintf(fd,
@@ -119,6 +123,30 @@ static inline void logger_log(FILE *fd, const char *file, const char *func,
     fprintf(fd, "%s\n", e->msg);
 }
 
+void logger_logm(const char *file, const char *func, int line, int level,
+                 const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+
+    char msg[MAX_LOGM_LEN];
+    vsnprintf(msg, MAX_LOGM_LEN, fmt, args);
+
+    struct logger_entry e = (struct logger_entry){
+        .level = level,
+        .msg = msg,
+    };
+
+    pthread_mutex_lock(&logger_state.mutex);
+    if (logger_state.fd) {
+        logger_log(logger_state.fd, file, func, line, &e);
+    }
+    logger_log(stderr, file, func, line, &e);
+
+    pthread_mutex_unlock(&logger_state.mutex);
+
+    va_end(args);
+}
+
 static inline void logger_set_file(FILE *fd) { logger_state.fd = fd; }
 static inline void logger_unset_file(void) { logger_state.fd = NULL; }
 static inline void logger_enable_flags(int flags) {
@@ -135,6 +163,11 @@ static inline void logger_clear_flags() { logger_state.flags = 0; }
         }                                                                      \
         logger_log(stderr, __FILE__, __func__, __LINE__, &LOGGER_TABLE[type]); \
         pthread_mutex_unlock(&logger_state.mutex);                             \
+    } while (0)
+
+#define LOGM(type, fmt, ...)                                                   \
+    do {                                                                       \
+        logger_logm(__FILE__, __func__, __LINE__, type, fmt, ##__VA_ARGS__);   \
     } while (0)
 
 #endif // LOGGER_H
