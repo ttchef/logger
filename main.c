@@ -12,6 +12,7 @@
     _X(WARN, VALUE_NOT_SET, "value not set")                                   \
     _X(INFO, PRINTED, "printed smth")
 
+#define LOGGER_IMPL
 #include "logger.h"
 
 int main() {

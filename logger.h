@@ -34,18 +34,9 @@
 enum { LOGGER_COLORS };
 #undef _Y
 
-/* generate color str array */
-#define _Y(type, str) str,
-static const char *LOGGER_COLOR_STR[] = {LOGGER_COLORS};
-#undef _Y
-
 /* generate enum */
 #define _X(level, type, msg, ...) level##_##type,
 enum { LOGGER_TYPES };
-#undef _X
-
-#define _X(level, type, msg, ...) +1
-static const int LOGGER_ERRORS_LEN = 0 LOGGER_TYPES;
 #undef _X
 
 /* logger level enum */
@@ -58,32 +49,27 @@ struct logger_level {
     const char *name;
 };
 
-#define _X(name, color) {color, #name},
-const struct logger_level LOGGER_LEVEL_TABLE[] = {LOGGER_LEVELS};
-#undef _X
-
 struct logger_entry {
     int level;
     const char *msg;
 };
-
-/* generate struct */
-#define _X(level, type, msg, ...) {level, msg},
-struct logger_entry LOGGER_TABLE[] = {LOGGER_TYPES};
-#undef _X
 
 enum {
     LOGGER_FLAG_THREAD_ID = (1 << 0),
     LOGGER_FLAG_TIME = (1 << 1),
 };
 
-static struct {
+struct logger_state {
     FILE *fd;
     int flags;
     pthread_mutex_t mutex;
-} logger_state = {
-    .mutex = PTHREAD_MUTEX_INITIALIZER,
 };
+
+extern const char *LOGGER_COLOR_STR[];
+extern const int LOGGER_ERRORS_LEN;
+extern const struct logger_level LOGGER_LEVEL_TABLE[];
+extern struct logger_entry LOGGER_TABLE[];
+extern struct logger_state logger_state;
 
 void logger_log(FILE *fd, const char *file, const char *func, int line,
                 struct logger_entry *e) {
@@ -169,5 +155,31 @@ static inline void logger_clear_flags() { logger_state.flags = 0; }
     do {                                                                       \
         logger_logm(__FILE__, __func__, __LINE__, type, fmt, ##__VA_ARGS__);   \
     } while (0)
+
+#ifdef LOGGER_IMPL
+
+struct logger_state logger_state = (struct logger_state){
+    .mutex = PTHREAD_MUTEX_INITIALIZER,
+};
+
+/* generate color str array */
+#define _Y(type, str) str,
+const char *LOGGER_COLOR_STR[] = {LOGGER_COLORS};
+#undef _Y
+
+#define _X(level, type, msg, ...) +1
+const int LOGGER_ERRORS_LEN = 0 LOGGER_TYPES;
+#undef _X
+
+#define _X(name, color) {color, #name},
+const struct logger_level LOGGER_LEVEL_TABLE[] = {LOGGER_LEVELS};
+#undef _X
+
+/* generate struct */
+#define _X(level, type, msg, ...) {level, msg},
+struct logger_entry LOGGER_TABLE[] = {LOGGER_TYPES};
+#undef _X
+
+#endif // LOGGER_IMPL
 
 #endif // LOGGER_H
